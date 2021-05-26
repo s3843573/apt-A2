@@ -110,32 +110,36 @@ void LinkedList::deleteAt(int i)
    length--;
 }
 
-std::shared_ptr<Tile> LinkedList::get(Colour c, Shape s, int &position)
+int LinkedList::get(std::shared_ptr<Tile> tile)
 {
    std::shared_ptr<Node> current = head;
-   bool found = false;
-   std::shared_ptr<Tile> t = nullptr;
-   int i = 0;
 
+   bool found = false;
+   int i = NO_SUCH_ELEMENT;
+   int position = 0;
    // looping through the link list
    while (current != nullptr && !found)
    {
-      std::shared_ptr<Tile> tile = current->tile;
-      bool isTile = tile->colour == c && tile->shape == s;
-      if (isTile)
+      std::shared_ptr<Tile> next = current->tile;
+      if (*tile == *next)
       {
-         t = current->tile;
          found = true;
+         i = position;
       }
       else
       {
-         // next node
          current = current->next;
-         i++;
+         // index of the wanted tile
+         ++position;
       }
    }
-   position = i;
-   return t;
+
+   if (i == NO_SUCH_ELEMENT)
+   {
+      throw std::runtime_error("Tile doesnt exists on player hand");
+   }
+
+   return i;
 }
 
 std::ostream &operator<<(std::ostream &out, LinkedList &list)

@@ -11,6 +11,7 @@ void printCredits();
 
 int main(void)
 {
+
    QwirkleGame game;
 
    // welcome message

@@ -5,9 +5,8 @@
 
 #include <random>
 #include <time.h>
-#define PLAYERSIZE 2
+#define PLAYERSIZE 1
 
-#define MAX_TILE_BAG_SIZE 72
 class QwirkleGame
 {
 public:
@@ -22,16 +21,13 @@ public:
 
     void addPlayer(std::string name, int index);
 
-    bool replaceTile(Colour c, Shape s, bool &changePlayer);
+    bool replaceTile(std::shared_ptr<Tile> tile, bool &changePlayer);
 
     bool endGame();
 
     // command for save and load for the game
     void saveGame(std::string fileName);
     void loadGame(std::string fileName);
-
-    // calculation for score
-    bool calculateScore(Point pos, std::shared_ptr<Tile> tile);
 
     // create a tile bag then shuffle it
     void setTileBag();
@@ -65,5 +61,6 @@ private:
     void shuffle(Tile t[]);
 
     void playGame(std::string message);
+    // const int playerSize;
 };
 #endif

@@ -10,6 +10,7 @@
 #define MAX_TILES 6
 
 #include <vector>
+
 class Board
 {
 public:
@@ -17,7 +18,9 @@ public:
     ~Board();
 
     // place tile on the board
-    void placeTile(Point p, std::shared_ptr<Tile> tile);
+    void placeTile(std::shared_ptr<Tile> tile, std::shared_ptr<Player> player = nullptr);
+
+    void removeTile(std::shared_ptr<Tile> tile);
 
     // print entire board
     void printBoard();
@@ -26,11 +29,12 @@ public:
     std::shared_ptr<Tile> getTile(Point p);
 
     // calculating the score for the placement
-    bool calculateScore(Point p, std::shared_ptr<Player> player,
+    bool calculateScore(std::shared_ptr<Player> player,
                         std::shared_ptr<Tile> tile);
 
     // using this method for saving board state
-    friend std::ostream &operator<<(std::ostream &os, Board &board);
+    friend std::ostream &
+    operator<<(std::ostream &os, Board &board);
 
 private:
     // vector of vectors of tiles

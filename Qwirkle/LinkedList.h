@@ -2,10 +2,11 @@
 #ifndef ASSIGN2_LINKEDLIST_H
 #define ASSIGN2_LINKEDLIST_H
 
+#define NO_SUCH_ELEMENT -1
+
 #include "Node.h"
 #include <exception>
 #include <iostream>
-
 #include <stdexcept>
 
 class LinkedList
@@ -21,7 +22,7 @@ public:
    std::shared_ptr<Tile> get(int i);
 
    // get node with tile infomation
-   std::shared_ptr<Tile> get(Colour c, Shape s, int &position);
+   int get(std::shared_ptr<Tile> tile);
 
    // add node to head
    void addFront(std::shared_ptr<Tile> data);

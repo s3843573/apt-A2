@@ -37,7 +37,7 @@ int intCharToInt(char c)
 
     if (n < OUT_OF_BOARD)
     {
-        throw std::logic_error(INVALID_INPUT);
+        throw std::logic_error("Cannot convert inputed Character to Integer");
     }
 
     return n;
@@ -55,7 +55,8 @@ void validatePlayerName(std::string &input, bool &valid)
         // each character should be upper case alphabet only
         if (islower(input.at(i)) || !isalpha(input.at(i)))
         {
-            throw std::logic_error(INVALID_INPUT);
+            std::string msg = "Invalid player name (upper case alphabet character only)";
+            throw std::logic_error(msg);
         }
     }
     valid = true;
@@ -68,28 +69,82 @@ bool validateShape(Shape s)
 
 bool validateColour(Colour c)
 {
-    return (c >= STARTPOINT && c <= ENDPOINT);
-}
+    if (c < STARTPOINT && c > ENDPOINT)
+    {
+        throw std::logic_error("Invalid colour");
+    }
 
+    return true;
+}
 bool validatePosition(int row, int col)
 {
-    // checking if the row and col is out of bound
-    bool xBound = (col > OUT_OF_BOARD && col < DIMENSIONS);
-    bool yBound = (row > OUT_OF_BOARD && row < DIMENSIONS);
-    return xBound && yBound;
+    bool xBound = (row < OUT_OF_BOARD || row >= DIMENSIONS);
+    bool yBound = (col < OUT_OF_BOARD || col >= DIMENSIONS);
+    if (xBound || yBound)
+    {
+        throw std::logic_error("Invalid Position");
+    }
+    std::cout << "position" << std::endl;
+    return true;
 }
 
-bool findWord(std::string str, std::vector<std::string> commands)
+bool validatePosition(Point p)
 {
-    bool match = false;
+    return validatePosition(p.getRow(), p.getColumn());
+}
+
+int findWord(std::string str, std::vector<std::string> commands)
+{
+    int index = NOT_FOUND;
     for (int i = 0; i < (int)commands.size(); i++)
     {
         if (commands[i] == str)
         {
-            match = true;
+            index = i;
         }
     }
-    return match;
+    return index;
+}
+
+bool mutiCheck(std::vector<std::shared_ptr<Tile>> tiles)
+{
+    for (unsigned i = 0; i < tiles.size() - 1; i++)
+    {
+        Point firstP = tiles.at(i)->p;
+        Point secondP = tiles.at(i + 1)->p;
+
+        bool rowRule = ((firstP.getRow() - secondP.getRow() == 1) ||
+                        (firstP.getRow() - secondP.getRow() == -1)) &&
+                       (firstP.getColumn() == secondP.getColumn());
+
+        bool colRule = ((firstP.getColumn() - secondP.getColumn() == 1) ||
+                        (firstP.getColumn() - secondP.getColumn() == -1)) &&
+                       (firstP.getRow() == secondP.getRow());
+
+        if (!(rowRule || colRule))
+        {
+            throw std::logic_error("Invalid Positions");
+        }
+    }
+
+    for (unsigned i = 0; i < tiles.size() - 1; i++)
+    {
+        std::shared_ptr<Tile> first = tiles.at(i);
+        Point firstP = first->p;
+        for (unsigned j = i + 1; j < tiles.size(); j++)
+        {
+            std::shared_ptr<Tile> second = tiles.at(j);
+            Point secondP = second->p;
+            bool colourRule = (first->colour == second->colour && first->shape != second->shape);
+            bool shapeRule = (first->shape == second->shape && first->colour != second->colour);
+
+            if (!(colourRule || shapeRule))
+            {
+                throw std::logic_error("Invalid Tiless");
+            }
+        }
+    }
+    return true;
 }
 
 void validateFile(std::string &name, bool &valid)
@@ -112,8 +167,8 @@ bool validateReplace(std::vector<std::string> commands, Colour &c, Shape &s)
     bool valid = false;
     if (commands.size() == SHORT_CMD_LENGTH)
     {
-        bool replace = findWord(COMMAND_REPLACE, commands);
-        if (replace)
+        int replace = findWord(COMMAND_REPLACE, commands);
+        if (replace != NOT_FOUND)
         {
             std::string tileInfo = commands[1];
             c = tileInfo.at(0);
@@ -131,54 +186,82 @@ std::string getCommand(std::vector<std::string> &commands, std::string input)
 
     if (commands.size() == 0)
     {
-        throw std::logic_error(INVALID_INPUT);
+        throw std::logic_error("Invalid command input");
     }
     return commands[0];
 }
 
-bool validatePlacement(std::vector<std::string> commands, Colour &c, Shape &s, Point &p)
+void validatePlacement(std::vector<std::string> commands, std::vector<std::shared_ptr<Tile>> &tiles)
 {
+    // adding inputed positions for tiles
+
+    // adding inputed tiles
 
     bool valid = false;
-    if (commands.size() == COMMAND_PLACE_LENGTH)
+    if (commands.size() >= COMMAND_PLACE_LENGTH)
     {
-        bool place = findWord(COMMAND_PLACE, commands);
-        bool at = findWord(STRING_AT, commands);
+        int place = findWord(COMMAND_PLACE, commands);
+        int at = findWord(STRING_AT, commands);
 
-        if (place && at)
+        if (place != NOT_FOUND && at != NOT_FOUND)
         {
-            // get tile
-            std::string tileInfo = commands[1];
-            c = tileInfo.at(0);
-            s = intCharToInt(tileInfo.at(1));
+            for (int i = 1; i < at; i++)
+            {
+                std::string tileInfo = commands.at(i);
+                Colour c = tileInfo.at(0);
+                Shape s = intCharToInt(tileInfo.at(1));
+                validateColour(c);
+                validateShape(s);
+                std::shared_ptr<Tile> tile = std::make_shared<Tile>(c, s);
+                tiles.push_back(tile);
+            }
+        }
 
-            // get position
-            std::string position = commands[3];
-            char row = position.at(0);
-
-            //NOTE SHAPE MAY BE 2 DIGIT
-            int column = intCharToInt(position.at(1));
-            if ((int)position.size() <= POSITION_LENGTH)
+        std::vector<Point> points;
+        for (int i = at + 1; i < (int)commands.size(); i++)
+        {
+            std::string point = commands.at(i);
+            int column = intCharToInt(point.at(1));
+            char row = point.at(0);
+            // coordinate above 9
+            if ((int)point.size() <= POSITION_LENGTH)
             {
                 // coordinate above 9
-                if (position.size() > 2)
+                if (point.size() > 2)
                 {
-                    column = column * 10 + intCharToInt(position.at(2));
+                    column = column * 10 + intCharToInt(point.at(2));
                 }
             }
             else
             {
                 column = OUT_OF_BOARD;
             }
-            p = Point(row, column);
-            valid = validateColour(c) && validateShape(s) && validatePosition(p.getRow(), column);
+            Point p(row, column);
+            validatePosition(p);
+            points.push_back(p);
         }
+
+        if (points.size() > tiles.size())
+        {
+            throw std::logic_error("You have more coordinates than tiles");
+        }
+        else if (tiles.size() > points.size())
+        {
+            throw std::logic_error("You have more tiles than coordinates");
+        }
+        else
+        {
+            for (unsigned i = 0; i < tiles.size(); i++)
+            {
+                tiles.at(i)->p = points.at(i);
+            }
+        }
+        valid = true;
     }
     if (!valid)
     {
-        throw std::logic_error(INVALID_INPUT);
+        throw std::logic_error("Invalid placement of Tile");
     }
-    return valid;
 }
 
 void validateCommand(std::vector<std::string> commands, std::string input, bool &valid)
@@ -186,9 +269,10 @@ void validateCommand(std::vector<std::string> commands, std::string input, bool 
     // checking if input matches any command
     if (!(commands.size() < SHORT_CMD_LENGTH))
     {
-        if (commands.at(0) == COMMAND_PLACE && (int)commands.size() == COMMAND_PLACE_LENGTH)
+        if (commands.at(0) == COMMAND_PLACE && commands.size() >= COMMAND_PLACE_LENGTH)
         {
-            valid = (commands.at(2) == STRING_AT) ? true : false;
+            int index = findWord(STRING_AT, commands);
+            valid = (index != NOT_FOUND) ? true : false;
         }
         else if (commands.at(0) == COMMAND_REPLACE &&
                  (int)commands.size() == SHORT_CMD_LENGTH)
@@ -197,6 +281,10 @@ void validateCommand(std::vector<std::string> commands, std::string input, bool 
         }
         else if (commands.at(0) == COMMAND_SAVE &&
                  (int)commands.size() == SHORT_CMD_LENGTH)
+        {
+            valid = true;
+        }
+        else if (commands.at(0) == COMMAND_MUTI_PLACE)
         {
             valid = true;
         }
@@ -265,4 +353,26 @@ std::string getValidInput(std::string type)
     }
 
     return input;
+}
+
+bool validMutiplePlacement(std::vector<std::string> commands, Tile tiles[])
+{
+    // if (commands.size() > COMMAND_PLACE_LENGTH)
+    // {
+    //     bool place = findWord(COMMAND_PLACE, commands);
+    //     bool at = findWord(STRING_AT, commands);
+
+    //     split(commands, )
+    // }
+    return false;
+}
+
+bool uniqueTile(std::vector<std::shared_ptr<Tile>> tiles, std::shared_ptr<Tile> tile)
+{
+    bool unique = false;
+    for (unsigned i = 0; i < tiles.size(); i++)
+    {
+        unique = tile == tiles.at(i);
+    }
+    return unique;
 }

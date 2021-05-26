@@ -72,22 +72,27 @@ void Board::printBoard()
     std::cout << std::endl;
 }
 
-void Board::placeTile(Point p, std::shared_ptr<Tile> tile)
+void Board::placeTile(std::shared_ptr<Tile> tile, std::shared_ptr<Player> player)
 {
+    Point p = tile->p;
     // if the point is out of the board, throw out of range exception
     if (!validatePosition(p.getRow(), p.getColumn()))
     {
-        throw std::out_of_range("Invalid Input");
+        throw std::out_of_range("Input Position out of the board");
+    }
+    if (player != nullptr)
+    {
+        calculateScore(player, tile);
     }
     board[p.getRow()][p.getColumn()] = tile;
 }
 
-bool Board::calculateScore(Point p, std::shared_ptr<Player> player,
+bool Board::calculateScore(std::shared_ptr<Player> player,
                            std::shared_ptr<Tile> tile)
 {
     // get coordinate information
-    int row = p.getRow();
-    int col = p.getColumn();
+    int row = tile->p.getRow();
+    int col = tile->p.getColumn();
 
     // neightbour coordinate
     int rowNeighbours[] = {1, 0, -1, 0};
@@ -143,9 +148,9 @@ bool Board::calculateScore(Point p, std::shared_ptr<Player> player,
             bool colourRule = current->colour == tile->colour && current->shape != tile->shape;
             bool shapeRule = current->shape == tile->shape && current->colour != tile->colour;
             bool rule = colourRule || shapeRule;
-            bool same = (current->colour == tile->colour && current->shape == tile->shape);
+            bool same = !(current == tile);
 
-            if (rule && !same)
+            if (rule && same)
             {
                 // adding tile score
                 ++tilesScore;
@@ -191,8 +196,9 @@ bool Board::calculateScore(Point p, std::shared_ptr<Player> player,
     }
     else
     {
-        throw std::logic_error(INVALID_INPUT);
+        throw std::logic_error("Invalid placement, check your tile and position");
     }
+    std::cout << "HERE" << std::endl;
     return placed;
 }
 
@@ -200,7 +206,7 @@ std::shared_ptr<Tile> Board::getTile(Point p)
 {
     if (!validatePosition(p.getRow(), p.getColumn()))
     {
-        throw std::out_of_range(INVALID_INPUT);
+        throw std::out_of_range("Input position out of the board");
     }
 
     return board[p.getRow()][p.getColumn()];
@@ -250,4 +256,10 @@ int Board::tiles()
         }
     }
     return count;
+}
+
+void Board::removeTile(std::shared_ptr<Tile> tile)
+{
+    Point p = tile->p;
+    board[p.getRow()][p.getColumn()] = nullptr;
 }

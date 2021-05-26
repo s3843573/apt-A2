@@ -3,6 +3,7 @@
 QwirkleGame::QwirkleGame()
 {
     currentPlayerIndex = 0;
+    // playerSize = c;
 }
 
 QwirkleGame::~QwirkleGame()
@@ -49,7 +50,7 @@ void QwirkleGame::setTileBag()
         }
     }
     // comment the shuffle function when testing the game.
-    shuffle(tiles);
+    // shuffle(tiles);
 
     for (int j = 0; j < MAX_TILE_BAG_SIZE; j++)
     {
@@ -91,12 +92,19 @@ void QwirkleGame::playGame(std::string message)
     while (!end)
     {
         // TESTING ONLY printing all tiles
-        // std::cout << tileBag << std::endl;
+        std::cout << tileBag << std::endl;
+
+        std::cout << std::endl;
+
+        for (unsigned int i = 0; i < addedTiles.size(); i++)
+        {
+            std::cout << addedTiles.at(i)->colour << ":" << addedTiles.at(i)->shape << ", ";
+        }
+        std::cout << std::endl;
 
         // print out basic player data
         std::cout << std::endl;
         std::cout << currentPlayer->getName() << ", it's your turn" << std::endl;
-
         for (int j = 0; j < PLAYERSIZE; j++)
         {
             std::shared_ptr<Player> p = players[j];
@@ -121,6 +129,10 @@ void QwirkleGame::playGame(std::string message)
         {
             std::cout << e.what() << std::endl;
         }
+        catch (std::runtime_error &e)
+        {
+            std::cout << e.what() << std::endl;
+        }
         // checking ending condition, if not switch player
         end = endGame();
         switchPlayer(currentPlayerIndex, changePlayer);
@@ -129,40 +141,46 @@ void QwirkleGame::playGame(std::string message)
 
 void QwirkleGame::executeCommand(std::string input, bool &changePlayer)
 {
-    Point point;
+    // Point point
     Colour c;
     Shape s;
     std::vector<std::string> commands;
-
+    std::vector<std::shared_ptr<Tile>> tiles;
     std::string command = getCommand(commands, input);
 
     // checking which command to perform
     if (commands[0] == COMMAND_PLACE)
     {
         // check if the colour, shape and point are valid
-        validatePlacement(commands, c, s, point);
-        int position = 0;
-        std::shared_ptr<Tile> tile = currentPlayer->getHand()->get(c, s, position);
+        validatePlacement(commands, tiles);
 
-        // calcualte score for the tile, and place it on board
-        calculateScore(point, tile);
-        board.placeTile(point, tile);
+        for (unsigned i = 0; i < tiles.size(); i++)
+        {
+            std::shared_ptr<Tile> tile = tiles.at(i);
+            int position = currentPlayer->getHand()->get(tile);
 
-        changePlayer = true;
-        currentPlayer->getHand()->deleteAt(position);
-        drawTile(currentPlayer);
+            // place tile
+            board.placeTile(tile, currentPlayer);
+            addedTiles.push_back(tile);
+            changePlayer = true;
+            currentPlayer->getHand()->deleteAt(position);
+            drawTile(currentPlayer);
+        }
     }
     else if (commands[0] == COMMAND_REPLACE)
     {
         // replace tile
         validateReplace(commands, c, s);
-        replaceTile(c, s, changePlayer);
+        replaceTile(tiles.at(0), changePlayer);
     }
     else if (commands[0] == COMMAND_SAVE)
     {
         // save game
         std::string name = commands[1];
         saveGame(name + FILE_EXTENSION);
+    }
+    else if (commands[0] == COMMAND_MUTI_PLACE)
+    {
     }
 }
 
@@ -192,25 +210,10 @@ void QwirkleGame::addPlayer(std::string name, int index)
     players[index] = p;
 }
 
-bool QwirkleGame::calculateScore(Point pos, std::shared_ptr<Tile> tile)
-{
-    if (tile == nullptr)
-    {
-        throw std::logic_error("Invalid Input");
-    }
-
-    bool placed = false;
-
-    // placed tile or not
-    placed = board.calculateScore(pos, currentPlayer, tile);
-    return placed;
-}
-
-bool QwirkleGame::replaceTile(Colour c, Shape s, bool &changePlayer)
+bool QwirkleGame::replaceTile(std::shared_ptr<Tile> tile, bool &changePlayer)
 {
     bool replaced = false;
-    int position = 0;
-    std::shared_ptr<Tile> tile = currentPlayer->getHand()->get(c, s, position);
+    int position = currentPlayer->getHand()->get(tile);
 
     // replace tile from player
     if (tile != nullptr)
@@ -320,8 +323,8 @@ void QwirkleGame::loadBoard(std::ifstream &file)
 
             // place tiles onto the board
             Point p(row, column);
-            board.placeTile(p, tile);
-            addedTiles.push_back(tile);
+            tile->p = p;
+            board.placeTile(tile);
         }
     }
 }
